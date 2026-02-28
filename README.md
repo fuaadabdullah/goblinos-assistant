@@ -8,6 +8,12 @@ GoblinOS Assistant is a multi-provider, privacy-first AI gateway and orchestrati
 
 GoblinOS Assistant centralizes model access, routing, and reliability controls so teams can ship AI features faster without vendor lock-in.
 
+## Screenshots
+
+![GoblinOS Assistant landing page](docs/images/hero.webp)
+![Chat workflow interface](docs/images/feature-01.webp)
+![Settings and provider controls](docs/images/feature-02.webp)
+
 ## Core capabilities
 
 - Multi-provider model routing and failover

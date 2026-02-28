@@ -8,14 +8,26 @@
 - PostgreSQL
 - Redis
 
-## Frontend
+## Environment configuration
+
+Copy `.env.example` to `.env.local` and set values.
+
+Critical variables:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `JWT_SECRET_KEY`
+- `INTERNAL_PROXY_API_KEY`
+- provider credentials (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
+
+## Frontend local run
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-## Backend
+## Backend local run
 
 ```bash
 python3 -m venv venv
@@ -23,7 +35,21 @@ python3 -m venv venv
 ./start.sh
 ```
 
-## Local endpoints
+## Validation
 
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8000`
+```bash
+pnpm lint
+pnpm test
+```
+
+## Deploy
+
+- Frontend: deploy on Vercel with server-side secrets configured.
+- Backend: deploy via Render/Fly config and set required environment variables.
+- Confirm CORS and proxy keys are aligned between frontend and backend.
+
+## Troubleshooting
+
+- `401/403` from backend: check `INTERNAL_PROXY_API_KEY` parity.
+- provider failures: verify provider API keys and model availability.
+- routing anomalies: check strategy env vars and provider health logs.
