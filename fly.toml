@@ -1,0 +1,42 @@
+
+app = "goblin-backend"
+primary_region = "iad"
+
+[build]
+dockerfile = "Dockerfile.prod"
+
+[env]
+PORT = "8001"
+ENVIRONMENT = "production"
+LOG_LEVEL = "INFO"
+ALLOW_MEMORY_FALLBACK = "true"
+
+[http_service]
+internal_port = 8001
+force_https = true
+auto_stop_machines = "stop"
+auto_start_machines = true
+min_machines_running = 1
+processes = ["app"]
+
+[[http_service.checks]]
+grace_period = "30s"
+interval = "30s"
+method = "GET"
+path = "/health"
+protocol = "http"
+timeout = "10s"
+
+[[vm]]
+memory = "4gb"
+cpu_kind = "shared"
+cpus = 2
+
+[[mounts]]
+source = "data"
+destination = "/app/data"
+
+# Required runtime secrets (set with `fly secrets set`):
+# - OLLAMA_GCP_URL=http://<ollama_static_ip>:11434
+# - LLAMACPP_GCP_URL=http://<llamacpp_static_ip>:8080
+# - LOCAL_LLM_API_KEY=<shared_private_key>

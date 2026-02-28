@@ -1,0 +1,51 @@
+# Dockerfile.prod - API deployment (ML runtime moved off Fly.io)
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+
+# Install system deps first (including curl for potential debugging)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install only API/runtime dependencies.
+# Local/vector/embedding runtime dependencies live in backend/requirements-ml.txt
+# and should be installed on dedicated ML infrastructure.
+COPY ./backend/requirements-prod.txt /app/requirements-api.txt
+COPY ./backend/requirements-ml.txt /app/requirements-ml.txt
+
+# Install API/runtime dependencies only.
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements-api.txt
+
+# Copy backend code
+COPY ./backend/ /app/backend/
+COPY ./config/ /app/config/
+COPY ./start.sh /app/start.sh
+
+# Remove macOS AppleDouble files that cause Fly.io build failures
+RUN find /app -name '._*' -type f -delete && \
+    find /app -name '.DS_Store' -type f -delete
+
+ENV PYTHONPATH=/app
+
+# Ensure backend is a package
+RUN if [ ! -f /app/backend/__init__.py ]; then touch /app/backend/__init__.py; fi
+
+# Clean up caches and test files
+RUN find /app -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /app -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true && \
+    find /app -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true && \
+    find /app -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    rm -rf /root/.cache/pip
+
+# Expose port
+ENV PORT=8001
+EXPOSE 8001
+
+RUN chmod +x /app/start.sh
+CMD ["/app/start.sh"]

@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: goblin-backend
+    runtime: docker
+    plan: starter
+    region: virginia
+    dockerContext: .
+    dockerfilePath: ./Dockerfile.prod
+    healthCheckPath: /health
+    autoDeploy: true
+    autoDeployTrigger: commit
+    envVars:
+      # Non-secret runtime settings
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DISABLE_LOCAL_ML
+        value: "true"
+      - key: ENABLE_ENHANCED_RAG
+        value: "false"
+      - key: GENERATE_OUTAGE_FALLBACK
+        value: "true"
+      - key: ALLOW_MEMORY_FALLBACK
+        value: "true"
+
+      # Required secrets (set manually in Render dashboard)
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ROUTING_ENCRYPTION_KEY
+        sync: false
+      - key: SETTINGS_ENCRYPTION_KEY
+        sync: false
+      - key: INTERNAL_PROXY_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+      # Provider-dependent secrets (set only when used)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_API_KEY
+        sync: false
+      - key: ALIYUN_MODEL_SERVER_URL
+        sync: false
+      - key: ALIYUN_MODEL_SERVER_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: OLLAMA_GCP_URL
+        sync: false
+      - key: LLAMACPP_GCP_URL
+        sync: false
+      - key: LOCAL_LLM_API_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

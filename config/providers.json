@@ -1,0 +1,136 @@
+{
+  "version": 2,
+  "default_timeout_ms": 12000,
+  "providers": {
+    "_comment": "API keys loaded from environment variables (.env file). See .env.example for configuration.",
+
+    "goblin-backend": {
+      "endpoint": "https://goblin-backend.onrender.com",
+      "priority_tier": 1,
+      "capabilities": ["chat", "completions"],
+      "models": [
+        "gemma:2b",
+        "mistral:7b",
+        "phi3:3.8b",
+        "deepseek-coder:1.3b",
+        "llama3.2:1b",
+        "qwen2.5:3b"
+      ],
+      "cost_score": 0.5,
+      "default_timeout_ms": 12000,
+      "rate_limit_per_min": 60,
+      "is_active": true
+    },
+
+    "together-qwen": {
+      "endpoint": "https://api.together.xyz/v1",
+      "api_key_env": "TOGETHER_API_KEY",
+      "priority_tier": 1,
+      "capabilities": ["chat", "completions", "code-generation"],
+      "models": ["qwen2.5-coder-32b-instruct", "qwen-coder-32b"],
+      "cost_score": 0.4,
+      "default_timeout_ms": 30000,
+      "rate_limit_per_min": 60,
+      "display_name": "Together AI (Qwen-Coder)",
+      "is_active": true,
+      "_description": "Recommended provider for Qwen-Coder models"
+    },
+
+    "openrouter-qwen": {
+      "endpoint": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "priority_tier": 2,
+      "capabilities": ["chat", "completions", "code-generation"],
+      "models": ["qwen/qwen-2.5-coder-32b-instruct"],
+      "cost_score": 0.5,
+      "default_timeout_ms": 30000,
+      "rate_limit_per_min": 60,
+      "display_name": "OpenRouter (Qwen)",
+      "is_active": true
+    },
+
+    "deepinfra-qwen": {
+      "endpoint": "https://api.deepinfra.com/v1",
+      "api_key_env": "DEEPINFRA_API_KEY",
+      "priority_tier": 2,
+      "capabilities": ["chat", "completions", "code-generation"],
+      "models": ["Qwen/Qwen2.5-Coder-32B-Instruct"],
+      "cost_score": 0.45,
+      "default_timeout_ms": 30000,
+      "rate_limit_per_min": 60,
+      "display_name": "DeepInfra (Qwen)",
+      "is_active": true
+    },
+
+    "azure-openai": {
+      "endpoint": "https://{resource}.openai.azure.com/",
+      "api_key_env": "AZURE_API_KEY",
+      "priority_tier": 1,
+      "capabilities": ["chat", "completions", "embeddings", "code-generation"],
+      "models": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-4o"],
+      "cost_score": 0.6,
+      "default_timeout_ms": 30000,
+      "rate_limit_per_min": 60,
+      "display_name": "Azure OpenAI",
+      "is_active": true,
+      "requires_env": ["AZURE_REGION", "AZURE_DEPLOYMENT_ID"],
+      "_description": "Enterprise Azure OpenAI. Requires AZURE_OPENAI_ENDPOINT env var"
+    },
+
+    "openai-fallback": {
+      "endpoint": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "priority_tier": 3,
+      "capabilities": ["chat", "completions"],
+      "models": ["gpt-4", "gpt-3.5-turbo"],
+      "cost_score": 0.7,
+      "default_timeout_ms": 30000,
+      "rate_limit_per_min": 60,
+      "display_name": "OpenAI (Fallback)",
+      "is_active": true
+    },
+
+    "ollama-gcp": {
+      "endpoint_env": "OLLAMA_GCP_URL",
+      "endpoint_fallback": "GCP_OLLAMA_URL",
+      "priority_tier": 2,
+      "capabilities": ["chat", "completions", "code-generation"],
+      "models": ["qwen2.5:3b", "gemma:2b", "llama2:7b", "mistral:7b"],
+      "cost_score": 0.1,
+      "default_timeout_ms": 60000,
+      "rate_limit_per_min": 120,
+      "display_name": "Ollama (GCP)",
+      "is_active": true,
+      "_description": "GCP-hosted Ollama instance for production inference. Set OLLAMA_GCP_URL to your GCP instance URL."
+    },
+
+    "llamacpp-gcp": {
+      "endpoint_env": "LLAMACPP_GCP_URL",
+      "endpoint_fallback": "GCP_LLAMACPP_URL",
+      "priority_tier": 2,
+      "capabilities": ["chat", "completions", "code-generation"],
+      "models": ["phi-3-mini-4k-instruct-q4", "mistral-7b-q4", "neural-7b-q4"],
+      "cost_score": 0.05,
+      "default_timeout_ms": 60000,
+      "rate_limit_per_min": 120,
+      "display_name": "Llama.cpp (GCP)",
+      "is_active": true,
+      "_description": "GCP-hosted llama.cpp server for optimized CPU/GPU inference. Set LLAMACPP_GCP_URL to your GCP instance URL."
+    },
+
+    "aliyun": {
+      "endpoint": "https://aliyun-model-server.example",
+      "api_key_env": "ALIYUN_MODEL_SERVER_KEY",
+      "priority_tier": 2,
+      "capabilities": ["chat", "completions", "code-generation"],
+      "models": ["qwen2.5:3b", "qwen2.5:7b-instruct", "qwen2.5-coder-32b-instruct"],
+      "cost_score": 0.15,
+      "default_timeout_ms": 60000,
+      "rate_limit_per_min": 120,
+      "display_name": "Aliyun Model Server",
+      "is_active": true,
+      "requires_env": ["ALIYUN_MODEL_SERVER_URL"],
+      "_description": "Aliyun-hosted model server endpoint. Runtime endpoint is read from ALIYUN_MODEL_SERVER_URL."
+    }
+  }
+}

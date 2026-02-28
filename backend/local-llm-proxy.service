@@ -1,0 +1,15 @@
+[Unit]
+Description=Local LLM Proxy Service
+After=network.target ollama.service llamacpp.service
+
+[Service]
+User=root
+WorkingDirectory=/usr/local/bin
+Environment=LOCAL_LLM_API_KEY=your-secure-api-key-here
+ExecStart=/opt/llm-proxy-venv/bin/python /usr/local/bin/local_llm_proxy.py
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

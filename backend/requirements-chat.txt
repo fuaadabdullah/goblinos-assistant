@@ -1,0 +1,18 @@
+# Fly.io Chat Backend Dependencies
+# Minimal dependencies for lightweight deployment
+
+# Web framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# HTTP client for fallback
+httpx>=0.26.0
+
+# Data validation
+pydantic>=2.6.0
+
+# llama-cpp-python installed separately in Dockerfile with CPU optimizations
+# llama-cpp-python>=0.2.55
+
+# Health monitoring
+prometheus-fastapi-instrumentator>=6.1.0

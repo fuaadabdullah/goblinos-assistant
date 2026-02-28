@@ -1,0 +1,104 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic[email]>=2.10.0
+email-validator>=2.2.0
+pydantic-settings>=2.6.0
+PyJWT>=2.9.0
+bcrypt>=4.2.0
+python-multipart>=0.0.9
+httpx>=0.28.0
+aiohttp>=3.11.0
+cryptography>=44.0.0
+python-dotenv>=1.1.0
+sqlalchemy>=2.0.40
+alembic>=1.16.0
+psycopg2-binary>=2.9.10
+supabase>=1.0.0
+openai>=1.50.0
+anthropic>=0.35.0
+google-generativeai>=0.5.0
+google-cloud-aiplatform>=1.60.0
+redis[hiredis]>=5.2.0
+pytest>=8.4.0
+pytest-asyncio>=0.25.0
+pytest-cov>=6.0.0
+faker>=31.0.0
+
+# RAG and Vector Search
+chromadb>=0.5.0
+rank-bm25>=0.2.0
+nltk>=3.9.0
+scikit-learn>=1.6.0
+numba<0.63
+llvmlite<0.46
+umap-learn>=0.5.7
+hdbscan>=0.8.40
+
+# Job Queue System - Celery with Redis backend
+celery[redis]>=5.4.0
+flower>=2.0.0  # Monitoring dashboard for Celery
+Flask>=3.1.0  # For monitoring endpoints
+flask-cors>=6.0.0
+flask-sqlalchemy>=3.1.0
+gunicorn>=23.0.0
+
+# Google Drive integration for Ollama models
+google-api-python-client>=2.170.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# Lightweight job scheduling - APScheduler with SQLAlchemy persistence
+APScheduler>=3.11.0
+psutil>=6.2.0  # System monitoring for health checks
+
+# HashiCorp Vault client
+hvac>=2.0.0
+
+# Production monitoring (lightweight, essential only)
+sentry-sdk[fastapi]>=2.1.0
+
+# OpenTelemetry for unified observability
+opentelemetry-distro>=0.50.0
+opentelemetry-instrumentation>=0.50.0
+opentelemetry-instrumentation-fastapi>=0.50.0
+opentelemetry-instrumentation-httpx>=0.50.0
+opentelemetry-instrumentation-sqlalchemy==0.59b0
+opentelemetry-instrumentation-redis==0.59b0
+opentelemetry-exporter-otlp>=1.30.0
+opentelemetry-exporter-otlp-proto-grpc>=1.30.0
+
+# Retry logic for API calls
+backoff>=2.0.0
+tenacity>=8.2.0
+
+# =============================================================================
+# RAG / Vector Search Dependencies
+# =============================================================================
+# Qdrant vector database client
+qdrant-client>=1.8.0
+
+# Sentence Transformers for embeddings
+sentence-transformers>=2.5.0
+
+# Optional: ONNX embedding runtime/export
+onnx>=1.16.0
+onnxruntime>=1.18.0
+optimum[onnxruntime]>=1.24.0
+
+# =============================================================================
+# Structured Logging & Observability
+# =============================================================================
+# Structured logging
+structlog>=24.1.0
+
+# JSON logging for middleware
+python-json-logger>=3.0.0
+numpy>=1.26.4
+
+# Prometheus client for metrics
+prometheus-client>=0.19.0
+
+# TinyLlama support
+transformers>=4.36.0
+torch>=2.1.0
+accelerate>=0.25.0
