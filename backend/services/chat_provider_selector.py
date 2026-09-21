@@ -7,9 +7,14 @@ separating provider management concerns from the main chat handler.
 
 import logging
 import time
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 from enum import Enum
+
+if TYPE_CHECKING:
+    # ChatState lives in chat_controller_refactored, which imports this module
+    # at runtime — so the import must stay type-check-only to avoid a cycle.
+    from .chat_controller_refactored import ChatState
 
 # Import LLM environment loader for configured provider selection
 try:

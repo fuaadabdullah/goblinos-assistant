@@ -328,7 +328,7 @@ class GoblinExecutor:
                 # Clean up temp file
                 try:
                     os.unlink(script_path)
-                except:
+                except Exception:
                     pass
 
         except Exception as e:

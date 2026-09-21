@@ -231,8 +231,6 @@ class RunPodProvider(BaseProvider):
         poll_interval: float = 1.0,
     ) -> dict[str, Any]:
         """Poll for job completion."""
-        import asyncio
-
         client = await self._get_client()
         elapsed = 0.0
 

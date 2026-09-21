@@ -6,7 +6,7 @@ import time
 from typing import Dict, List, Optional, Any
 import logging
 
-from .base_adapter import AdapterBase
+from .base_adapter import AdapterBase, ProviderError
 from .provider_registry import get_provider_registry
 
 logger = logging.getLogger(__name__)

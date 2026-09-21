@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import asyncio
 import time
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 try:
     # redis-py 4.x exposes asyncio support under redis.asyncio

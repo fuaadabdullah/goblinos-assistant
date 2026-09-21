@@ -17,9 +17,6 @@ import os
 # `import backend.services...` works when cwd == <project>/apps/goblin-assistant-root/backend
 __path__ = [os.path.dirname(__file__)]
 
-# Re-export package metadata if present
-try:
-    # If the real package __init__ is importable, prefer its attributes
-    from . import __all__ as __all__  # type: ignore
-except Exception:
-    __all__ = ["services", "config", "database"]
+# Submodules exposed through __path__ above. The names are strings referring to
+# submodules, not module-level variables (hence the F822 noqa).
+__all__ = ["services", "config", "database"]  # noqa: F822

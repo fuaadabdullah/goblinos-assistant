@@ -31,7 +31,10 @@ jobs:
           pip install ruff pip-audit
 
       - name: Lint (ruff)
-        run: ruff check backend/
+        # Pin the root config: backend/pyproject.toml carries a stricter
+        # dev-only rule set that ruff would otherwise prefer for this path.
+        # The gate intentionally uses the conservative root config.
+        run: ruff check backend/ --config pyproject.toml
 
       - name: Security audit (pip-audit)
         run: pip-audit
