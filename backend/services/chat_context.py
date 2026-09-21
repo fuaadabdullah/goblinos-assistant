@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from ..errors import raise_problem
 from . import config_processor, request_validation
-from . import brave_search, freeserp_search
+from . import web_search as web_search_service
 from .types import GatewayCheckResult
 
 logger = logging.getLogger(__name__)
@@ -15,25 +15,23 @@ logger = logging.getLogger(__name__)
 async def _maybe_add_web_search(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Enrich chat messages with web-search results when warranted.
 
-    Provider selection: Brave Search when BRAVE_API_KEY is set, otherwise
-    FreeSerp (keyless, no signup), unless CHAT_WEB_SEARCH_PROVIDER forces
-    one of "brave"/"freeserp"/"auto".
+    The web_search facade routes each query to the right provider(s):
+    FreeSerp for startup/competitor discovery, Brave for breaking news,
+    both merged and deduped for everything else. A missing Brave key or a
+    failing provider degrades gracefully instead of breaking chat.
 
-    Never breaks chat: any failure (no key, transport error, empty results)
-    leaves the messages untouched.
+    Never breaks chat: any failure leaves the messages untouched.
     """
     try:
-        name = freeserp_search.provider_name()
-        provider = brave_search if name == "brave" else freeserp_search
-        query = provider.should_search(messages)
+        query = web_search_service.should_search(messages)
         if not query:
             return messages
-        results = await provider.web_search(query)
+        results = await web_search_service.web_search(query)
         if not results:
             return messages
         search_message = {
             "role": "system",
-            "content": provider.format_results_for_llm(query, results),
+            "content": web_search_service.format_results_for_llm(query, results),
         }
         # Keep it with the other system messages so provider adapters that
         # treat a trailing system message oddly still see it up front.
@@ -44,7 +42,7 @@ async def _maybe_add_web_search(messages: list[dict[str, Any]]) -> list[dict[str
             else:
                 break
         logger.info(
-            "Added %d %s search results for chat query", len(results), name
+            "Added %d web search results for chat query", len(results)
         )
         return messages[:insert_at] + [search_message] + messages[insert_at:]
     except Exception:

@@ -20,13 +20,15 @@ class EssayResponse(BaseModel):
 
 
 async def _research_topic(prompt: str) -> str:
-    """Research the essay topic using Brave Search."""
-    from ..services.brave_search import BraveSearchNotConfigured, web_search
+    """Research the essay topic using the unified web-search facade.
+
+    Intent-routed (Brave / FreeSerp / both merged); works with no API keys
+    at all since FreeSerp is keyless.
+    """
+    from ..services.web_search import web_search
 
     try:
         results = await web_search(prompt, count=5)
-    except BraveSearchNotConfigured:
-        return "No research available - BRAVE_API_KEY not configured."
     except Exception as e:  # pragma: no cover - external dependency
         return f"Research failed: {str(e)}"
 
@@ -35,7 +37,7 @@ async def _research_topic(prompt: str) -> str:
 
     research_info = []
     for result in results[:3]:
-        snippet = result.snippet[:300]
+        snippet = result.summary[:300]
         if snippet:
             research_info.append(f"{result.title}: {snippet}...")
         else:
