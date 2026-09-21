@@ -57,6 +57,13 @@ jobs:
           --ignore-vuln PYSEC-2026-3929
 
       - name: Tests with coverage
+        # Dummy test-only secrets: the backend refuses to import without real
+        # secrets configured (production-readiness fix). These values are
+        # obviously fake, used only to let the test suite import the routers.
+        env:
+          JWT_SECRET_KEY: test-only-dummy-jwt-secret-not-for-production
+          INTERNAL_PROXY_API_KEY: test-only-dummy-proxy-key
+          ROUTING_ENCRYPTION_KEY: test-only-dummy-routing-key-32bytes!!
         # Initial coverage floor is intentionally modest: the suite is still
         # growing (see H11). Raise --cov-fail-under as coverage improves.
         run: >
