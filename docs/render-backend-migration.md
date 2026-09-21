@@ -32,7 +32,7 @@ Recommended `CORS_ORIGINS` value:
 - `https://goblin-assistant.vercel.app,https://goblin-assistant-*.vercel.app,http://localhost:3000,http://localhost:5173`
 
 Set provider-dependent secrets only if used:
-- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`, `TAVILY_API_KEY`
+- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`, `BRAVE_API_KEY`
 - `OLLAMA_GCP_URL`, `LLAMACPP_GCP_URL`, `LOCAL_LLM_API_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`, `SENTRY_DSN`
 

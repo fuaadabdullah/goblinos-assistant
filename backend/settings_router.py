@@ -1,5 +1,6 @@
 import os
 import logging
+from urllib.parse import urlparse
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional, Dict, Any
@@ -9,9 +10,42 @@ from dotenv import load_dotenv
 from .database import get_db
 from .models import Provider, Model
 from .config import settings as app_settings
+from .auth.dependencies import require_scope
+from .auth.policies import AuthScope
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 logger = logging.getLogger(__name__)
+
+# C3: settings writes are admin-only.
+require_admin = require_scope(AuthScope.ADMIN_SYSTEM)
+
+# C3: cloud instance-metadata endpoints must never be usable as a provider
+# base_url (SSRF with credential exfiltration via the Authorization header).
+_BLOCKED_BASE_URL_HOSTS = frozenset(
+    {
+        "169.254.169.254",  # AWS / GCP / Azure instance metadata
+        "metadata.google.internal",
+        "metadata.google.com",
+        "instance-data-compute.google.internal",
+    }
+)
+
+
+def _validate_provider_base_url(base_url: str) -> None:
+    """Allowlist-validate a provider base_url: http(s) scheme, real host, no metadata endpoints."""
+    parsed = urlparse(base_url or "")
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=400, detail="base_url must use the http or https scheme"
+        )
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise HTTPException(status_code=400, detail="base_url must include a host")
+    if host in _BLOCKED_BASE_URL_HOSTS:
+        raise HTTPException(
+            status_code=400,
+            detail="base_url host is not allowed (cloud metadata endpoint)",
+        )
 
 # Load environment variables
 load_dotenv()
@@ -132,7 +166,8 @@ async def get_providers(db: Session = Depends(get_db)):
     )
     payload = []
     for p in providers_db:
-        has_key = bool(getattr(p, "api_key", None) or getattr(p, "api_key_encrypted", None))
+        # H3: plaintext api_key column removed; presence = encrypted store or env.
+        has_key = bool(getattr(p, "api_key_encrypted", None))
         if not has_key:
             has_key = _env_has_provider_key(getattr(p, "name", "") or "")
         payload.append(
@@ -177,7 +212,7 @@ class GlobalSettingUpdate(BaseModel):
     value: str
 
 
-@router.put("/global/{key}")
+@router.put("/global/{key}", dependencies=[Depends(require_admin)])
 async def update_global_setting(key: str, update: GlobalSettingUpdate):
     """
     Compatibility shim: accept updates but do not mutate process env.
@@ -188,7 +223,7 @@ async def update_global_setting(key: str, update: GlobalSettingUpdate):
     return {"status": "success", "key": key, "value": update.value}
 
 
-@router.put("/providers/{provider_key}")
+@router.put("/providers/{provider_key}", dependencies=[Depends(require_admin)])
 async def update_provider_settings(
     provider_key: str, settings: ProviderSchema, db: Session = Depends(get_db)
 ):
@@ -209,6 +244,9 @@ async def update_provider_settings(
         update_fields = settings.model_dump(exclude_unset=True)
         # Prevent accidental renames via payload; the key in the URL is the identity.
         update_fields.pop("name", None)
+        # C3: validate base_url before persisting (SSRF / key-exfiltration guard).
+        if update_fields.get("base_url"):
+            _validate_provider_base_url(update_fields["base_url"])
         for field, value in update_fields.items():
             if field == "models" and value is not None:
                 # Store as list[str] for now; routing service may enrich later.
@@ -234,7 +272,7 @@ async def update_provider_settings(
         )
 
 
-@router.put("/models/{model_name}")
+@router.put("/models/{model_name}", dependencies=[Depends(require_admin)])
 async def update_model_settings(
     model_name: str, settings: ModelSchema, db: Session = Depends(get_db)
 ):
@@ -269,7 +307,7 @@ async def update_model_settings(
         )
 
 
-@router.post("/test-connection")
+@router.post("/test-connection", dependencies=[Depends(require_admin)])
 async def test_provider_connection(provider_name: str, db: Session = Depends(get_db)):
     """Test connection to a provider's API"""
     try:
@@ -281,7 +319,11 @@ async def test_provider_connection(provider_name: str, db: Session = Depends(get
                 status_code=404, detail=f"Provider {provider_name} not found"
             )
 
-        if not provider.api_key:
+        # H3: plaintext api_key column removed; check encrypted store or env.
+        has_key = bool(getattr(provider, "api_key_encrypted", None)) or _env_has_provider_key(
+            provider.name or ""
+        )
+        if not has_key:
             return {
                 "status": "warning",
                 "message": f"No API key configured for {provider_name}",
@@ -321,7 +363,7 @@ async def get_rag_settings():
         )
 
 
-@router.put("/rag")
+@router.put("/rag", dependencies=[Depends(require_admin)])
 async def update_rag_settings(rag_settings: RAGSettings):
     """Update RAG settings"""
     try:
@@ -344,7 +386,7 @@ async def update_rag_settings(rag_settings: RAGSettings):
         )
 
 
-@router.post("/rag/test")
+@router.post("/rag/test", dependencies=[Depends(require_admin)])
 async def test_rag_configuration():
     """Test RAG configuration and dependencies"""
     try:

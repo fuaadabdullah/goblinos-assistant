@@ -348,6 +348,7 @@ def register_jobs(scheduler):
     from .jobs.provider_health import probe_all_providers_job
     from .jobs.system_health import system_health_check_job
     from .jobs.cleanup import cleanup_expired_data_job
+    from .jobs.retention import retention_purge_job
 
     # Provider health check - every 5 minutes
     scheduler.add_job(
@@ -373,6 +374,15 @@ def register_jobs(scheduler):
         "interval",
         hours=6,
         id="cleanup_expired_data",
+        replace_existing=True,
+    )
+
+    # Retention purge (tasks, routing_requests, search_documents) - daily
+    scheduler.add_job(
+        retention_purge_job,
+        "interval",
+        hours=24,
+        id="retention_purge",
         replace_existing=True,
     )
 

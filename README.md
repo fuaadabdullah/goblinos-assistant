@@ -4,6 +4,8 @@ Canonical repository for GoblinOS Assistant.
 
 GoblinOS Assistant is a multi-provider, privacy-first AI gateway and orchestration platform with a full-stack implementation (Next.js + FastAPI).
 
+What is stored about you, for how long, and how to delete it: [docs/privacy.md](docs/privacy.md).
+
 ## Value proposition
 
 GoblinOS Assistant centralizes model access, routing, and reliability controls so teams can ship AI features faster without vendor lock-in.
@@ -58,6 +60,7 @@ Business and engineering outcomes are documented in [docs/impact.md](docs/impact
 
 - [Architecture](docs/architecture.md)
 - [Setup](docs/setup.md)
+- [Privacy & data retention](docs/privacy.md)
 - [Impact](docs/impact.md)
 
 ## Contact

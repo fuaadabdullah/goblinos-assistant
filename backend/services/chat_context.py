@@ -6,9 +6,46 @@ from typing import Any, Optional
 
 from ..errors import raise_problem
 from . import config_processor, request_validation
+from .brave_search import (
+    format_results_for_llm,
+    should_search,
+    web_search,
+)
 from .types import GatewayCheckResult
 
 logger = logging.getLogger(__name__)
+
+
+async def _maybe_add_web_search(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Enrich chat messages with Brave web-search results when warranted.
+
+    Never breaks chat: any failure (no key, transport error, empty results)
+    leaves the messages untouched.
+    """
+    try:
+        query = should_search(messages)
+        if not query:
+            return messages
+        results = await web_search(query)
+        if not results:
+            return messages
+        search_message = {
+            "role": "system",
+            "content": format_results_for_llm(query, results),
+        }
+        # Keep it with the other system messages so provider adapters that
+        # treat a trailing system message oddly still see it up front.
+        insert_at = 0
+        for i, msg in enumerate(messages):
+            if isinstance(msg, dict) and msg.get("role") == "system":
+                insert_at = i + 1
+            else:
+                break
+        logger.info("Added %d Brave search results for chat query", len(results))
+        return messages[:insert_at] + [search_message] + messages[insert_at:]
+    except Exception:
+        logger.warning("Chat web-search enrichment failed", exc_info=True)
+        return messages
 
 
 @dataclass
@@ -69,6 +106,8 @@ async def build_generate_context(
             code="GATEWAY_DENIED",
             instance=correlation_id,
         )
+
+    messages = await _maybe_add_web_search(messages)
 
     return ChatContext(
         messages=messages,

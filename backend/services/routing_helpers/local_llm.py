@@ -279,15 +279,13 @@ async def find_fast_local_model(
 
     # Check if fast models are available
     try:
-        # Get API key - try encrypted first, fall back to plain text
+        # Get API key - encrypted store first (H3: no plaintext fallback), then env
         api_key = None
         if provider.api_key_encrypted:
             try:
                 api_key = encryption_service.decrypt(provider.api_key_encrypted)
             except Exception:
                 pass
-        if not api_key and provider.api_key:
-            api_key = provider.api_key
         if not api_key:
             return None
 

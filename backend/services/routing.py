@@ -10,7 +10,7 @@ See docs/backend/ROUTING_REFACTORING.md for complete architecture documentation.
 import uuid
 import asyncio
 import os
-from typing import Dict, List, Optional, Any
+from typing import Collection, Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import logging
 from sqlalchemy.orm import Session
@@ -152,7 +152,6 @@ class RoutingService:
             adapter = await self.provider_registry.initialize_adapter(
                 provider_name=provider.name,
                 encrypted_key=provider.api_key_encrypted,
-                plain_key=provider.api_key,
                 base_url=getattr(provider, "base_url", None),
             )
 
@@ -194,6 +193,7 @@ class RoutingService:
         client_ip: Optional[str] = None,
         user_id: Optional[str] = None,
         request_path: Optional[str] = None,
+        exclude_providers: Optional[Collection[str]] = None,
     ) -> Dict[str, Any]:
         """Route a request to the best available provider with autoscaling support.
 
@@ -206,6 +206,8 @@ class RoutingService:
             client_ip: Client IP for rate limiting
             user_id: User ID for rate limiting
             request_path: Request path for emergency endpoint detection
+            exclude_providers: Optional provider names to skip (post-failure
+                failover: providers that already failed this request)
 
         Returns:
             Dict with routing decision and provider info
@@ -252,6 +254,7 @@ class RoutingService:
                     sla_target_ms,
                     cost_budget,
                     latency_priority,
+                    exclude_providers=exclude_providers,
                 )
             )
 

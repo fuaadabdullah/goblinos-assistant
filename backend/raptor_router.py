@@ -1,9 +1,12 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 import os
 import sys
 from pathlib import Path
+
+from .auth.dependencies import require_scope
+from .auth.policies import AuthScope
 
 # Add GoblinOS to path for raptor import (optional in production containers).
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "GoblinOS"))
@@ -34,12 +37,15 @@ except Exception:  # pragma: no cover - GoblinOS isn't shipped in Fly image
 
 router = APIRouter(prefix="/raptor", tags=["raptor"])
 
+# H6: start/stop control the host monitoring process — admin scope only.
+_require_admin = Depends(require_scope(AuthScope.ADMIN_SYSTEM))
+
 
 class LogsRequest(BaseModel):
     max_chars: int = 1000
 
 
-@router.post("/start")
+@router.post("/start", dependencies=[_require_admin])
 async def raptor_start():
     """Start raptor monitoring with real RaptorMini system"""
     try:
@@ -49,7 +55,7 @@ async def raptor_start():
         raise HTTPException(status_code=500, detail=f"Failed to start raptor: {str(e)}")
 
 
-@router.post("/stop")
+@router.post("/stop", dependencies=[_require_admin])
 async def raptor_stop():
     """Stop raptor monitoring"""
     try:

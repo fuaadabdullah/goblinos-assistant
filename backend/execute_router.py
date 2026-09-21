@@ -7,11 +7,18 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Task
 from .services.goblin_executor import get_goblin_executor
+from .auth.dependencies import require_scope
+from .auth.policies import AuthScope
 import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/execute", tags=["execute"])
+router = APIRouter(
+    prefix="/execute",
+    tags=["execute"],
+    # C4: queueing/reading task execution must never be anonymous.
+    dependencies=[Depends(require_scope(AuthScope.WRITE_CONVERSATIONS))],
+)
 
 
 class ExecuteRequest(BaseModel):

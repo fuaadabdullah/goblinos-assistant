@@ -1,10 +1,17 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import Dict, Any
 import logging
 
 from .model_router import ModelRouter
+from ..auth.dependencies import require_scope
+from ..auth.policies import AuthScope
 
-router = APIRouter(prefix="/debugger", tags=["debugger"])
+router = APIRouter(
+    prefix="/debugger",
+    tags=["debugger"],
+    # H6: /suggest triggers paid LLM inference — never anonymous.
+    dependencies=[Depends(require_scope(AuthScope.WRITE_CONVERSATIONS))],
+)
 logger = logging.getLogger(__name__)
 model_router = ModelRouter()
 

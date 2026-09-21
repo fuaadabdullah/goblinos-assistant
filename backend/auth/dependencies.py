@@ -54,11 +54,15 @@ def require_internal_proxy_key(request: Request) -> None:
     """
     Validate the internal Next.js -> FastAPI proxy key.
 
-    If no key is configured, this check is a no-op for local development.
+    Fail-closed: if no key is configured, the request is denied. Configure
+    one of INTERNAL_PROXY_API_KEY / BACKEND_API_KEY / INTERNAL_API_SECRET.
+    Startup validation refuses to boot in production without one.
     """
     expected = _get_expected_internal_proxy_key()
     if not expected:
-        return
+        raise HTTPException(
+            status_code=401, detail="Internal proxy key is not configured"
+        )
 
     provided = (request.headers.get("x-internal-api-key") or "").strip()
     if not provided or not compare_digest(provided, expected):

@@ -65,7 +65,7 @@
 1. ✅ `backend/services/routing_config.py` - Configuration management
 2. ✅ `backend/async_database.py` - Async SQLAlchemy support
 3. ✅ `backend/services/provider_registry.py` - Adapter initialization
-4. ✅ `backend/test_routing_config.py` - Configuration tests (13 tests, 100% pass)
+4. ✅ `backend/tests/test_routing_config.py` - Configuration tests (13 tests, 100% pass)
 5. ✅ `backend/docs/ROUTING_REFACTORING.md` - Migration guide and architecture
 
 ### Modified Files
@@ -224,7 +224,7 @@ See [ROUTING_REFACTORING.md](docs/ROUTING_REFACTORING.md) section 7 for:
 
 **Refactoring Lead**: GitHub Copilot (Claude Sonnet 4.5)
 **Documentation**: See `backend/docs/ROUTING_REFACTORING.md`
-**Test Coverage**: See `backend/test_routing_config.py`
+**Test Coverage**: See `backend/tests/test_routing_config.py`
 
 ---
 

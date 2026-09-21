@@ -6,7 +6,7 @@ Handles provider candidate selection, scoring, ranking, and fallback decisions.
 
 import logging
 import os
-from typing import Dict, Any, Optional, List
+from typing import Collection, Dict, Any, Optional, List
 
 from ..local_llm_routing import detect_intent, get_system_prompt, Intent
 
@@ -83,6 +83,7 @@ async def handle_provider_selection_and_fallback(
     sla_target_ms: Optional[float] = None,
     cost_budget: Optional[float] = None,
     latency_priority: Optional[str] = None,
+    exclude_providers: Optional[Collection[str]] = None,
 ) -> Dict[str, Any]:
     """
     Handle provider selection with fallback logic.
@@ -95,14 +96,28 @@ async def handle_provider_selection_and_fallback(
         sla_target_ms: SLA target response time
         cost_budget: Maximum cost per request
         latency_priority: Latency priority
+        exclude_providers: Optional provider names to skip (post-failure
+            failover: providers that already failed this request are excluded
+            so the next-best candidate is selected instead)
 
     Returns:
         Dict with routing result
     """
+    excluded = set(exclude_providers or ())
+
     # Find suitable providers
     candidates = await routing_service._find_suitable_providers(
         capability, requirements
     )
+
+    # Post-failure failover: drop providers that already failed this request.
+    # Scoring/ranking below is untouched; it simply ranks fewer candidates.
+    if excluded:
+        candidates = [
+            c
+            for c in candidates
+            if str(c.get("name") or "") not in excluded
+        ]
 
     if not candidates:
         return {
@@ -119,26 +134,36 @@ async def handle_provider_selection_and_fallback(
     if use_fallback:
         fallback_provider = await routing_service._get_fallback_provider()
         if fallback_provider:
-            logger.info(f"Using fallback provider: {fallback_provider['display_name']}")
+            fallback_name = str(fallback_provider.get("name") or "")
+            if fallback_name and fallback_name in excluded:
+                # The latency-fallback provider already failed this request;
+                # fall through to normal scoring of the remaining candidates.
+                logger.info(
+                    "Latency-fallback provider %s excluded after failure; "
+                    "scoring remaining candidates",
+                    fallback_name,
+                )
+            else:
+                logger.info(f"Using fallback provider: {fallback_provider['display_name']}")
 
-            # Log the routing decision
-            await routing_service._log_routing_request(
-                request_id=request_id,
-                capability=capability,
-                requirements=requirements,
-                selected_provider_id=fallback_provider["id"],
-                success=True,
-            )
+                # Log the routing decision
+                await routing_service._log_routing_request(
+                    request_id=request_id,
+                    capability=capability,
+                    requirements=requirements,
+                    selected_provider_id=fallback_provider["id"],
+                    success=True,
+                )
 
-            return {
-                "success": True,
-                "request_id": request_id,
-                "provider": fallback_provider,
-                "capability": capability,
-                "requirements": requirements,
-                "is_fallback": True,
-                "fallback_reason": "latency_sla_violation",
-            }
+                return {
+                    "success": True,
+                    "request_id": request_id,
+                    "provider": fallback_provider,
+                    "capability": capability,
+                    "requirements": requirements,
+                    "is_fallback": True,
+                    "fallback_reason": "latency_sla_violation",
+                }
 
     # Score and rank providers
     scored_providers = await routing_service._score_providers(

@@ -37,7 +37,8 @@ class Provider(Base):
         String(100), nullable=False, unique=True
     )  # e.g., "openai", "anthropic"
     display_name = Column(String(200), nullable=True)  # e.g., "OpenAI", "Anthropic"
-    api_key = Column(String(500), nullable=True)  # From api/app.py
+    # H3: plaintext api_key column removed. Keys live only in api_key_encrypted
+    # (Fernet, see services/encryption.py) or ProviderCredential.encrypted_key.
     base_url = Column(String(500), nullable=True)  # From api/app.py
     api_key_encrypted = Column(Text, nullable=True)  # Encrypted API key
     is_active = Column(Boolean, default=True)
@@ -65,9 +66,10 @@ class Provider(Base):
     )
 
     def to_dict(self):
+        # H3: never serialize secrets. The API key field is presence-masked only.
         return {
             "name": self.name,
-            "api_key": self.api_key or "",
+            "api_key": "***" if self.api_key_encrypted else None,
             "base_url": self.base_url or "",
             "models": self.models or [],
             "enabled": self.enabled,

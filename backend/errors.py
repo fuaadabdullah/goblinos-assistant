@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from backend.services.gateway_exceptions import TokenBudgetExceeded, MaxTokensExceeded
 from backend.providers.circuit_breaker import CircuitBreakerOpen
 from backend.providers.bulkhead import BulkheadExceeded
+from backend.providers.base_adapter import ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -316,6 +317,21 @@ def _map_circuit_breaker_open(
     )
 
 
+def _map_provider_error(
+    exc: ProviderError, correlation_id: Optional[str]
+) -> ProblemDetail:
+    """Map ProviderError to ProblemDetail."""
+    # Deliberately generic: per-provider failure internals stay server-side.
+    return create_problem_detail(
+        status=503,
+        title="All providers unavailable",
+        detail="All providers failed to complete the request",
+        type_uri="https://goblin-backend.onrender.com/errors/provider-unavailable",
+        code=ErrorCodes.PROVIDER_UNAVAILABLE,
+        instance=correlation_id,
+    )
+
+
 def _map_bulkhead_exceeded(
     exc: BulkheadExceeded, correlation_id: Optional[str]
 ) -> ProblemDetail:
@@ -374,6 +390,8 @@ def map_exception_to_problem(
         return _map_circuit_breaker_open(exc, correlation_id)
     if isinstance(exc, BulkheadExceeded):
         return _map_bulkhead_exceeded(exc, correlation_id)
+    if isinstance(exc, ProviderError):
+        return _map_provider_error(exc, correlation_id)
     if isinstance(exc, httpx.TimeoutException):
         return _map_timeout_exception(exc, correlation_id)
     return _map_generic_exception(exc, correlation_id)

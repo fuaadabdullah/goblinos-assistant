@@ -13,6 +13,7 @@ load_dotenv()
 
 # Import models
 from .models import Provider, Model, SearchCollection, SearchDocument, Task
+from .services.encryption import EncryptionService
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,12 @@ def _provider_seed_data() -> list[dict[str, Any]]:
 
 def _upsert_provider(db: Session, provider_data: dict[str, Any]) -> Provider:
     target_name = cast(str, provider_data["name"])
+    # H3: seed keys come from env vars; they are stored encrypted only, never
+    # in the (removed) plaintext api_key column.
+    raw_api_key = provider_data.get("api_key") or None
+    encrypted_api_key = (
+        EncryptionService().encrypt(raw_api_key) if raw_api_key else None
+    )
     provider = db.query(Provider).filter_by(name=target_name).first()
     # Legacy rename: "siliconflow" -> "siliconeflow"
     if not provider and target_name == "siliconeflow":
@@ -189,7 +196,8 @@ def _upsert_provider(db: Session, provider_data: dict[str, Any]) -> Provider:
             provider_any.name = "siliconeflow"  # type: ignore[assignment]
             provider = provider_any
     if provider:
-        provider.api_key = provider_data.get("api_key") or provider.api_key
+        if encrypted_api_key:
+            provider.api_key_encrypted = encrypted_api_key
         provider.base_url = provider_data.get("base_url", provider.base_url)
         provider.models = provider_data.get("models", provider.models)
         provider.enabled = provider_data.get("enabled", provider.enabled)
@@ -197,11 +205,17 @@ def _upsert_provider(db: Session, provider_data: dict[str, Any]) -> Provider:
         provider.is_active = provider.enabled
         return provider
 
+    # Never pass the plaintext "api_key" seed key into the model constructor.
+    create_data = {
+        k: v for k, v in provider_data.items() if k != "api_key"
+    }
     provider_data = {
-        **provider_data,
+        **create_data,
         "display_name": provider_data["name"].capitalize(),
         "is_active": provider_data.get("enabled", True),
     }
+    if encrypted_api_key:
+        provider_data["api_key_encrypted"] = encrypted_api_key
     provider = Provider(**provider_data)
     db.add(provider)
     return provider
@@ -222,8 +236,10 @@ def seed_database(db: Session) -> None:
         logger.info("Updating existing providers...")
         for provider_data in providers_data:
             provider = _upsert_provider(db, provider_data)
-            if provider.api_key and provider_data.get("api_key"):
-                logger.info("Updated API key for %s", provider.name)
+            if provider_data.get("api_key"):
+                logger.info(
+                    "Updated API key (stored encrypted) for %s", provider.name
+                )
         db.commit()
         logger.info("Providers updated successfully.")
 

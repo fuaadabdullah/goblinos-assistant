@@ -14,13 +14,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Import Base and all models
 from database import Base
 from models import User, Task, Stream, StreamChunk, SearchCollection, SearchDocument
-from models.settings import Provider, ProviderCredential, ModelConfig, GlobalSetting
-from models.routing import (
-    RoutingProvider,
-    ProviderMetric,
+# C6: models.settings is comment-only and models.routing only re-exports a
+# subset; import every name from its real home (models.provider).
+from models.provider import (
+    Provider,
+    ProviderCredential,
+    ModelConfig,
     ProviderPolicy,
+    ProviderMetric,
     RoutingRequest,
 )
+from models.routing import RoutingProvider  # noqa: F401  (alias of Provider)
 
 # Load environment variables
 from dotenv import load_dotenv

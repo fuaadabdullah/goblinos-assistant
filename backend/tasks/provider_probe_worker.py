@@ -141,7 +141,7 @@ class ProviderProbeWorker:
             Dict with health metrics
         """
         try:
-            # Get API key - try encrypted first, fall back to plain text
+            # Get API key - encrypted store only (H3: no plaintext fallback)
             api_key = None
             if provider.api_key_encrypted:
                 try:
@@ -150,8 +150,6 @@ class ProviderProbeWorker:
                     )
                 except Exception:
                     pass
-            if not api_key and provider.api_key:
-                api_key = provider.api_key
             if not api_key:
                 raise ValueError(f"No API key available for provider {provider.name}")
 

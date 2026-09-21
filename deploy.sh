@@ -6,8 +6,8 @@
 
 set -euo pipefail
 
-REPO_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
-APP_DIR="$REPO_ROOT/apps/goblin-assistant"
+# The repo root IS the app directory (flat layout — there is no apps/ subdir).
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_PLATFORM="${BACKEND_PLATFORM:-render}"
 case "$BACKEND_PLATFORM" in
   "render"|"fly") ;;
@@ -19,7 +19,7 @@ esac
 
 echo "🚀 Goblin Assistant Deployment Script"
 echo "===================================="
-echo "Repo Root: $REPO_ROOT"
+echo "Repo Root: $APP_DIR"
 echo "App Dir: $APP_DIR"
 echo "Backend Platform: $BACKEND_PLATFORM"
 echo ""

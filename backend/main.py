@@ -142,11 +142,64 @@ async def validate_startup_configuration():
         if settings.is_production and settings.allow_memory_fallback and settings.is_multi_instance:
             issues.append("Memory fallback not allowed in multi-instance production")
 
-        if settings.is_production and not os.getenv("ROUTING_ENCRYPTION_KEY"):
-            issues.append("ROUTING_ENCRYPTION_KEY required in production for chat routing")
+        # H9: JWT secret must never be missing or the shipped default placeholder
+        # in production — fail fast instead of booting with a public secret.
+        jwt_secret = (getattr(settings, "jwt_secret_key", "") or "").strip()
+        if settings.is_production and (
+            not jwt_secret or jwt_secret == "your-secret-key-change-in-production"
+        ):
+            raise RuntimeError(
+                "Refusing to boot in production: JWT secret is missing or still the "
+                "default placeholder. Set JWT_SECRET_KEY to a strong random value."
+            )
+
+        # H9: ROUTING_ENCRYPTION_KEY is required to decrypt provider
+        # credentials — fail fast instead of booting degraded.
+        if settings.is_production and not (os.getenv("ROUTING_ENCRYPTION_KEY") or "").strip():
+            raise RuntimeError(
+                "Refusing to boot in production: ROUTING_ENCRYPTION_KEY is not set."
+            )
+
+        # H9: wildcard CORS origins combined with allow_credentials=True lets
+        # any site make credentialed requests — refuse in production.
+        cors_origins = [
+            origin.strip()
+            for origin in os.getenv("CORS_ORIGINS", "").split(",")
+            if origin.strip()
+        ]
+        if "*" in cors_origins:  # allow_credentials=True is hardcoded below
+            if settings.is_production:
+                raise RuntimeError(
+                    "Refusing to boot in production: CORS_ORIGINS contains '*' while "
+                    "allow_credentials=True. Enumerate explicit origins instead."
+                )
+            _log.warning(
+                "CORS_ORIGINS contains '*' with allow_credentials=True; "
+                "credentials may be exposed to any origin."
+            )
+
+        # C2: require_internal_proxy_key fails closed at request time; in
+        # production a missing key would 401 the frontend proxy, so refuse
+        # to boot until one is configured.
+        if settings.is_production and not any(
+            (os.getenv(name) or "").strip()
+            for name in (
+                "INTERNAL_PROXY_API_KEY",
+                "BACKEND_API_KEY",
+                "INTERNAL_API_SECRET",
+            )
+        ):
+            raise RuntimeError(
+                "INTERNAL_PROXY_API_KEY (or BACKEND_API_KEY / INTERNAL_API_SECRET) "
+                "must be set in production: internal proxy auth fails closed"
+            )
 
     except ImportError:
         issues.append("Configuration system not available")
+    except RuntimeError:
+        # C2/H9: production fail-fast raises must propagate to the caller and
+        # refuse boot — never downgrade them to logged warnings.
+        raise
     except Exception as e:
         issues.append(f"Configuration validation failed: {e}")
 

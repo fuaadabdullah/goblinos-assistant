@@ -8,6 +8,7 @@ Supports voice synthesis, voice cloning, and multi-language support.
 import os
 from typing import Dict, Any, Optional, AsyncIterator
 import aiohttp
+from aiohttp import ClientTimeout
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,9 @@ class ElevenLabsAdapter:
 
         # Default voice ID (George - narrator voice)
         self.default_voice_id = "JBFqnCBsd6RMkjVDRZzb"
+
+        # C5: per-call timeout (seconds), consistent with ProviderConfig default.
+        self.timeout = 30
 
         # Default settings
         self.default_model_id = "eleven_multilingual_v2"
@@ -84,7 +88,10 @@ class ElevenLabsAdapter:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                url, headers=self.headers, json=payload
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=ClientTimeout(total=self.timeout),
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
@@ -136,7 +143,10 @@ class ElevenLabsAdapter:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                url, headers=self.headers, json=payload
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=ClientTimeout(total=self.timeout),
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()

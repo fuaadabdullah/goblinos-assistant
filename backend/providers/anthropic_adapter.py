@@ -49,10 +49,14 @@ class AnthropicAdapter(AdapterBase):
         # Only pass base_url if explicitly provided (None is valid for Anthropic default)
         if self.base_url:
             self.client = anthropic.Anthropic(
-                api_key=self.api_key, base_url=self.base_url
+                api_key=self.api_key,
+                base_url=self.base_url,
+                timeout=self.timeout,
             )
         else:
-            self.client = anthropic.Anthropic(api_key=self.api_key)
+            self.client = anthropic.Anthropic(
+                api_key=self.api_key, timeout=self.timeout
+            )
 
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check on Anthropic API.

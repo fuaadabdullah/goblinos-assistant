@@ -1,0 +1,46 @@
+name: CI
+
+# Quality gates for the backend. These must pass before any deploy
+# (Render auto-deploys on commit, so this workflow is the only gate).
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend tests, lint & security audit
+    runs-on: ubuntu-latest
+    env:
+      # Keep the test run hermetic: never emit telemetry from CI.
+      DISABLE_OPENTELEMETRY: "true"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Pinned to match Dockerfile.prod (python:3.11-slim).
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install ruff pip-audit
+
+      - name: Lint (ruff)
+        run: ruff check backend/
+
+      - name: Security audit (pip-audit)
+        run: pip-audit
+
+      - name: Tests with coverage
+        # Initial coverage floor is intentionally modest: the suite is still
+        # growing (see H11). Raise --cov-fail-under as coverage improves.
+        run: >
+          python -m pytest
+          --cov=backend
+          --cov-report=term-missing
+          --cov-fail-under=15

@@ -67,7 +67,12 @@ def init_opentelemetry():
     """Initialize OpenTelemetry SDK with OTLP exporters."""
 
     environment = os.getenv("ENVIRONMENT", "development")
-    otlp_endpoint = os.getenv("OTLP_ENDPOINT", "http://localhost:4318")
+    # This module uses the OTLP **gRPC** exporter
+    # (opentelemetry-exporter-otlp-proto-grpc), whose default port is 4317.
+    # Port 4318 is the OTLP/HTTP port — do not use it here unless the
+    # exporter is switched to opentelemetry-exporter-otlp-proto-http.
+    # Override with OTLP_ENDPOINT (see .env.example).
+    otlp_endpoint = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
 
     # Only initialize in production/staging environments or when explicitly disabled
     if os.getenv("DISABLE_OPENTELEMETRY", "").lower() == "true":

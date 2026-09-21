@@ -1,22 +1,45 @@
 # apps/goblin-assistant-root/backend/routers/cost_router.py
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
 from ..database import get_db
-from ..models import Task
+from ..models import Task, User
+from ..auth_service import get_auth_service, JWTAuthService
 
 router = APIRouter()
+security = HTTPBearer()
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+    auth_service: JWTAuthService = Depends(get_auth_service),
+) -> User:
+    claims = auth_service.validate_access_token(credentials.credentials)
+    if not claims:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_id = claims.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
+
 
 @router.get("/cost-summary", response_model=Dict[str, Any], tags=["cost"])
 async def get_cost_summary(
-    user_id: str = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get overall cost summary"""
+    """Get overall cost summary for the authenticated user"""
     query = db.query(Task).filter(Task.status == "completed")
-    if user_id:
-        query = query.filter(Task.user_id == user_id)
+    query = query.filter(Task.user_id == current_user.id)
 
     tasks = query.all()
 

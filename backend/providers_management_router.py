@@ -67,18 +67,15 @@ class ProviderReorderRequest(BaseModel):
 
 
 def _resolve_provider_key(provider: Provider) -> str:
-    # Prefer encrypted key if present; fall back to plaintext.
+    # H3: encrypted store first, then env. The plaintext provider.api_key
+    # column was removed; never read secrets from it.
     encrypted = getattr(provider, "api_key_encrypted", None)
     if encrypted:
         try:
             return EncryptionService().decrypt(encrypted)
         except Exception:
-            # Fall back to plaintext/env if decryption fails.
             pass
 
-    key = getattr(provider, "api_key", None) or ""
-    if key:
-        return key
     # As a last resort, fall back to env var expected by registry.
     provider_name = (provider.name or "").strip().lower().replace("-", "_")
     env_candidates: list[str] = []

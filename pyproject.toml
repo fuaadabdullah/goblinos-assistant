@@ -1,0 +1,17 @@
+[tool.pytest.ini_options]
+# All tests live under backend/tests/ (unit + integration).
+testpaths = ["backend/tests"]
+# Ensure `import backend...` resolves no matter where pytest is invoked from.
+pythonpath = ["."]
+# Async tests opt in explicitly via @pytest.mark.asyncio (pytest-asyncio
+# is installed); strict mode keeps unmarked coroutine tests as errors.
+asyncio_mode = "strict"
+
+[tool.ruff]
+target-version = "py311"
+# Conservative error-level gate: catches real bugs (undefined names,
+# syntax-level errors, pyflakes issues) without failing on style nits
+# across the legacy tree. F401 (unused imports) is excluded as known
+# legacy debt with low signal. Tighten the selection as debt is cleaned up.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["F401"]

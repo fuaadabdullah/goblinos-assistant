@@ -113,20 +113,20 @@ class ProviderRegistry:
         self,
         provider_name: str,
         encrypted_key: Optional[str] = None,
-        plain_key: Optional[str] = None,
     ) -> Optional[str]:
         """Resolve API key from multiple sources.
 
         Priority order:
         1. Decrypt encrypted_key if provided
-        2. Use plain_key if provided
-        3. Check environment variables
-        4. Return None for providers that don't require keys (e.g., local Ollama)
+        2. Check environment variables
+        3. Return None for providers that don't require keys (e.g., local Ollama)
+
+        H3: the plaintext provider.api_key column was removed; there is no
+        plain-text database source anymore.
 
         Args:
             provider_name: Provider name
             encrypted_key: Encrypted API key from database
-            plain_key: Plain text API key from database
 
         Returns:
             Resolved API key or None
@@ -137,10 +137,6 @@ class ProviderRegistry:
                 return self.encryption_service.decrypt(encrypted_key)
             except Exception as e:
                 logger.warning(f"Failed to decrypt API key for provider {provider_name}: {e}")
-
-        # Fall back to plain API key
-        if plain_key:
-            return plain_key
 
         # Check environment variables
         env_key = _resolve_env_api_key(provider_name)
@@ -183,7 +179,6 @@ class ProviderRegistry:
         self,
         provider_name: str,
         encrypted_key: Optional[str] = None,
-        plain_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ) -> Optional[ProviderBase]:
         """Initialize a provider adapter.
@@ -191,7 +186,6 @@ class ProviderRegistry:
         Args:
             provider_name: Provider name
             encrypted_key: Encrypted API key from database
-            plain_key: Plain text API key from database
             base_url: Base URL from database
 
         Returns:
@@ -204,7 +198,7 @@ class ProviderRegistry:
             return None
 
         # Resolve API key
-        api_key = self.resolve_api_key(provider_name, encrypted_key, plain_key)
+        api_key = self.resolve_api_key(provider_name, encrypted_key)
 
         # Resolve base URL
         resolved_base_url = self.resolve_base_url(provider_name, base_url)

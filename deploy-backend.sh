@@ -163,6 +163,16 @@ deploy_to_fly() {
     return
   fi
 
+  # The staged-context helper (scripts/fly_prepare_context.sh) does not exist
+  # in this repo. Fail here with guidance instead of hitting the hard error
+  # inside prepare_staged_context.
+  if [[ ! -x "$SCRIPT_DIR/scripts/fly_prepare_context.sh" ]]; then
+    print_warning "Fly context preparation script not found: $SCRIPT_DIR/scripts/fly_prepare_context.sh"
+    print_status "Cannot stage the Fly rollback build context automatically."
+    manual_fly_instructions
+    return 1
+  fi
+
   export COPYFILE_DISABLE=1
   export COPY_EXTENDED_ATTRIBUTES_DISABLE=1
 

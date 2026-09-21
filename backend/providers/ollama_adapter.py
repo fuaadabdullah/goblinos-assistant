@@ -49,7 +49,9 @@ class OllamaAdapter(AdapterBase):
 
     def get_status(self):
         try:
-            response = requests.get(f"{self.base_url}/api/status")
+            response = requests.get(
+                f"{self.base_url}/api/status", timeout=self.timeout
+            )
             response.raise_for_status()
             return response.json()
         except Exception as e:

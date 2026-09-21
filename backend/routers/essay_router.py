@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import httpx
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -21,42 +20,28 @@ class EssayResponse(BaseModel):
 
 
 async def _research_topic(prompt: str) -> str:
-    """Research the essay topic using Tavily API."""
-    tavily_api_key = os.getenv("TAVILY_API_KEY")
-    if not tavily_api_key:
-        return "No research available - Tavily API key not configured."
+    """Research the essay topic using Brave Search."""
+    from ..services.brave_search import BraveSearchNotConfigured, web_search
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.tavily.com/search",
-                json={
-                    "api_key": tavily_api_key,
-                    "query": prompt,
-                    "search_depth": "advanced",
-                    "include_answer": True,
-                    "include_raw_content": False,
-                    "max_results": 5,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            research_info = []
-            if "answer" in data and data["answer"]:
-                research_info.append(f"Summary: {data['answer']}")
-
-            if "results" in data:
-                for result in data["results"][:3]:
-                    title = result.get("title", "")
-                    content = result.get("content", "")
-                    if content:
-                        research_info.append(f"{title}: {content[:300]}...")
-
-            return "\n\n".join(research_info) if research_info else "No relevant research found."
-
+        results = await web_search(prompt, count=5)
+    except BraveSearchNotConfigured:
+        return "No research available - BRAVE_API_KEY not configured."
     except Exception as e:  # pragma: no cover - external dependency
         return f"Research failed: {str(e)}"
+
+    if not results:
+        return "No relevant research found."
+
+    research_info = []
+    for result in results[:3]:
+        snippet = result.snippet[:300]
+        if snippet:
+            research_info.append(f"{result.title}: {snippet}...")
+        else:
+            research_info.append(result.title)
+
+    return "\n\n".join(research_info)
 
 
 async def _generate_essay_with_llm(

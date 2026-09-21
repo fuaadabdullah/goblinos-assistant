@@ -89,9 +89,7 @@ async def discover_providers(
                 logger.warning(f"Failed to decrypt API key for provider {provider.name}: {e}")
                 api_key = None
 
-        if not api_key and provider.api_key:
-            api_key = provider.api_key
-
+        # H3: no plaintext provider.api_key fallback; encrypted store or env only.
         if not api_key:
             env_key = _resolve_env_api_key(provider.name)
             api_key = env_key or None

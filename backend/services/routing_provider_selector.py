@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Collection, Dict, Optional
 
 from fastapi import Request
 
@@ -108,6 +108,7 @@ class RoutingProviderSelector:
         http_request: Request,
         messages: list[dict[str, str]],
         gateway_result: Any,
+        exclude_providers: Optional[Collection[str]] = None,
     ) -> tuple[RoutedProvider, Dict[str, Any]]:
         requirements = config_processor.build_requirements(request, messages, gateway_result)
         client_ip, request_path, user_id = config_processor.get_client_context(http_request)
@@ -121,6 +122,7 @@ class RoutingProviderSelector:
             client_ip=client_ip,
             user_id=user_id,
             request_path=request_path,
+            exclude_providers=exclude_providers,
         )
 
         if not routing_result.get("success"):

@@ -84,7 +84,13 @@ class AdapterBase(ABC):
             )
 
     async def _call_with_circuit_breaker(self, func, *args, **kwargs) -> Any:
-        """Execute a provider call with circuit breaker + bulkhead protection."""
+        """Execute a provider call with circuit breaker + bulkhead protection.
+
+        Retries transient failures up to ``max_retries`` times with
+        exponential backoff. Every attempt is bounded by an
+        ``asyncio.wait_for`` deadline of ``timeout`` seconds so a hung
+        provider cannot stall a worker indefinitely.
+        """
         try:
             # Fail fast if the circuit is open.
             self.circuit_breaker.before_call()
@@ -93,19 +99,48 @@ class AdapterBase(ABC):
                 self.name, f"Circuit breaker is open: {e}", {"circuit_state": "open"}
             ) from e
 
-        try:
-            async with self.bulkhead.guard():
-                try:
-                    if asyncio.iscoroutinefunction(func):
-                        result = await func(*args, **kwargs)
-                    else:
-                        result = await asyncio.to_thread(func, *args, **kwargs)
+        timeout = float(self.timeout) if self.timeout else 30.0
+        max_attempts = max(1, int(self.max_retries or 0) + 1)
 
-                    self.circuit_breaker.record_success()
-                    return result
-                except Exception:
-                    self.circuit_breaker.record_failure()
+        async def _invoke_once() -> Any:
+            if asyncio.iscoroutinefunction(func):
+                coro = func(*args, **kwargs)
+            else:
+
+                async def _run_in_thread() -> Any:
+                    return await asyncio.to_thread(func, *args, **kwargs)
+
+                coro = _run_in_thread()
+            return await asyncio.wait_for(coro, timeout=timeout)
+
+        last_error: Optional[Exception] = None
+        try:
+            for attempt in range(max_attempts):
+                try:
+                    async with self.bulkhead.guard():
+                        try:
+                            result = await _invoke_once()
+                        except Exception:
+                            self.circuit_breaker.record_failure()
+                            raise
+                        self.circuit_breaker.record_success()
+                        return result
+                except BulkheadExceeded:
+                    # Local capacity signal: surface immediately, do not retry.
                     raise
+                except Exception as e:  # noqa: BLE001 - retried with backoff below
+                    last_error = e
+                    if attempt < max_attempts - 1:
+                        backoff = min(2.0**attempt, 8.0)
+                        logger.debug(
+                            "Provider %s attempt %d/%d failed (%s); retrying in %.1fs",
+                            self.name,
+                            attempt + 1,
+                            max_attempts,
+                            type(e).__name__,
+                            backoff,
+                        )
+                        await asyncio.sleep(backoff)
         except BulkheadExceeded as e:
             raise ProviderError(
                 self.name,
@@ -118,6 +153,18 @@ class AdapterBase(ABC):
             raise ProviderError(
                 self.name, str(e), {"original_exception": type(e).__name__}
             ) from e
+
+        # All attempts exhausted.
+        raise ProviderError(
+            self.name,
+            f"Provider call failed after {max_attempts} attempt(s): {last_error}",
+            {
+                "original_exception": type(last_error).__name__
+                if last_error is not None
+                else None,
+                "attempts": max_attempts,
+            },
+        ) from last_error
 
     async def _acall_with_circuit_breaker(self, func, *args, **kwargs) -> Any:
         """Backward-compatible alias for async provider calls."""

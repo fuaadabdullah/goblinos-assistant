@@ -377,7 +377,7 @@ async def test_routing(test_config):
 
 ```bash
 # Test configuration module
-pytest backend/test_routing_config.py -v
+pytest backend/tests/test_routing_config.py -v
 
 # Test routing service with mocked async DB
 pytest backend/tests/test_routing.py -v

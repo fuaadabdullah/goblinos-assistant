@@ -1,12 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import re
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import SearchCollection, SearchDocument
+from .auth.dependencies import require_scope
+from .auth.policies import AuthScope
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+# H6: reads require an authenticated read scope; /add writes to the vector
+# store and requires a write scope. Nothing here is anonymous anymore.
+_require_read = Depends(require_scope(AuthScope.READ_CONVERSATIONS))
+_require_write = Depends(require_scope(AuthScope.WRITE_CONVERSATIONS))
 
 
 class SearchQuery(BaseModel):
@@ -63,7 +70,7 @@ def simple_text_search(
     return scored_docs[:n_results]
 
 
-@router.post("/query", response_model=SearchResponse)
+@router.post("/query", response_model=SearchResponse, dependencies=[_require_read])
 async def search_documents(search_query: SearchQuery, db: Session = Depends(get_db)):
     """Search documents using simple text search"""
     try:
@@ -119,7 +126,7 @@ async def search_documents(search_query: SearchQuery, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
-@router.get("/collections")
+@router.get("/collections", dependencies=[_require_read])
 async def list_collections(db: Session = Depends(get_db)):
     """List all available collections"""
     try:
@@ -131,7 +138,7 @@ async def list_collections(db: Session = Depends(get_db)):
         )
 
 
-@router.post("/collections/{collection_name}/add")
+@router.post("/collections/{collection_name}/add", dependencies=[_require_write])
 async def add_document(
     collection_name: str,
     document: str,
@@ -176,7 +183,7 @@ async def add_document(
         raise HTTPException(status_code=500, detail=f"Failed to add document: {str(e)}")
 
 
-@router.get("/collections/{collection_name}/documents")
+@router.get("/collections/{collection_name}/documents", dependencies=[_require_read])
 async def get_collection_documents(collection_name: str, db: Session = Depends(get_db)):
     """Get all documents in a collection"""
     try:
@@ -212,7 +219,7 @@ async def get_collection_documents(collection_name: str, db: Session = Depends(g
         )
 
 
-@router.get("/suggest", tags=["search"])
+@router.get("/suggest", tags=["search"], dependencies=[_require_read])
 async def search_suggest(q: str = Query("")):
     """Get search suggestions"""
     if not q:

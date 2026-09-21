@@ -50,7 +50,9 @@ class DeepSeekAdapter(AdapterBase):
         config["base_url"] = normalized
 
         super().__init__(name="deepseek", config=config)
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        self.client = OpenAI(
+            api_key=self.api_key, base_url=self.base_url, timeout=self.timeout
+        )
 
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check on DeepSeek API.

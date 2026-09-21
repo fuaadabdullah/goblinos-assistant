@@ -142,13 +142,11 @@ async def login(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    # Verify password
+    # Verify password. Users created via OAuth have no password hash and must
+    # always fail password login (H7: no test-bypass backdoor in prod auth).
     if not user.password_hash:
-        if os.getenv("ALLOW_TEST_PASSWORD_BYPASS", "0") != "1":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
-            )
-    elif not verify_password(request.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if not verify_password(request.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     # Create tokens
@@ -433,11 +431,17 @@ async def get_google_auth_url():
         )
 
     try:
-        auth_url, state = oauth_service.get_authorization_url()
+        auth_url, state = await oauth_service.get_authorization_url()
         return {"authorization_url": auth_url, "state": state}
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except RuntimeError as e:
+        # H8: state persistence failed — fail closed, do not issue the URL.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
         )
 
@@ -460,6 +464,15 @@ async def google_oauth_callback(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google OAuth is not configured",
+        )
+
+    # H8: validate the OAuth state token before anything else (login CSRF
+    # protection). Missing, unknown, or expired state fails closed.
+    state_payload = await oauth_service.validate_oauth_state(request.state)
+    if state_payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired OAuth state",
         )
 
     # Exchange code for tokens

@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 import os
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
 from .services.sandbox_runner import SandboxRunnerError, execute_sandbox_code
+from .auth.dependencies import require_scope
+from .auth.policies import AuthScope
 
 # Prefer Redis+Celery-backed task inspection; in production Redis is required
 try:
@@ -21,7 +23,12 @@ try:
 except ImportError:
     TASKS = {}
 
-router = APIRouter(prefix="/sandbox", tags=["sandbox"])
+router = APIRouter(
+    prefix="/sandbox",
+    tags=["sandbox"],
+    # C1: executing/reading sandbox jobs must never be anonymous.
+    dependencies=[Depends(require_scope(AuthScope.WRITE_CONVERSATIONS))],
+)
 
 
 class SandboxJobResponse(BaseModel):
