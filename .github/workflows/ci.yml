@@ -37,7 +37,24 @@ jobs:
         run: ruff check backend/ --config pyproject.toml
 
       - name: Security audit (pip-audit)
-        run: pip-audit
+        # Baseline ignores (2026-09-21): no fixed release exists upstream for
+        # these (chromadb incl. PYSEC-2026-311 — the app only uses the embedded
+        # PersistentClient, never the HTTP server; nltk), or the fix needs a
+        # breaking major upgrade (transformers 5.x — tracked as upgrade debt).
+        # The gate still fails on any new vulnerability. Revisit the ignores
+        # when upstream ships fixes.
+        run: >-
+          pip-audit
+          --ignore-vuln PYSEC-2026-311
+          --ignore-vuln PYSEC-2026-3814
+          --ignore-vuln PYSEC-2026-3815
+          --ignore-vuln PYSEC-2026-3813
+          --ignore-vuln PYSEC-2026-3740
+          --ignore-vuln PYSEC-2025-217
+          --ignore-vuln PYSEC-2026-2288
+          --ignore-vuln PYSEC-2026-2289
+          --ignore-vuln PYSEC-2026-2290
+          --ignore-vuln PYSEC-2026-3929
 
       - name: Tests with coverage
         # Initial coverage floor is intentionally modest: the suite is still
