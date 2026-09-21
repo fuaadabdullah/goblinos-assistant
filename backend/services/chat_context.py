@@ -6,32 +6,34 @@ from typing import Any, Optional
 
 from ..errors import raise_problem
 from . import config_processor, request_validation
-from .brave_search import (
-    format_results_for_llm,
-    should_search,
-    web_search,
-)
+from . import brave_search, freeserp_search
 from .types import GatewayCheckResult
 
 logger = logging.getLogger(__name__)
 
 
 async def _maybe_add_web_search(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Enrich chat messages with Brave web-search results when warranted.
+    """Enrich chat messages with web-search results when warranted.
+
+    Provider selection: Brave Search when BRAVE_API_KEY is set, otherwise
+    FreeSerp (keyless, no signup), unless CHAT_WEB_SEARCH_PROVIDER forces
+    one of "brave"/"freeserp"/"auto".
 
     Never breaks chat: any failure (no key, transport error, empty results)
     leaves the messages untouched.
     """
     try:
-        query = should_search(messages)
+        name = freeserp_search.provider_name()
+        provider = brave_search if name == "brave" else freeserp_search
+        query = provider.should_search(messages)
         if not query:
             return messages
-        results = await web_search(query)
+        results = await provider.web_search(query)
         if not results:
             return messages
         search_message = {
             "role": "system",
-            "content": format_results_for_llm(query, results),
+            "content": provider.format_results_for_llm(query, results),
         }
         # Keep it with the other system messages so provider adapters that
         # treat a trailing system message oddly still see it up front.
@@ -41,7 +43,9 @@ async def _maybe_add_web_search(messages: list[dict[str, Any]]) -> list[dict[str
                 insert_at = i + 1
             else:
                 break
-        logger.info("Added %d Brave search results for chat query", len(results))
+        logger.info(
+            "Added %d %s search results for chat query", len(results), name
+        )
         return messages[:insert_at] + [search_message] + messages[insert_at:]
     except Exception:
         logger.warning("Chat web-search enrichment failed", exc_info=True)
