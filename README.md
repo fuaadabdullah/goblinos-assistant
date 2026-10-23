@@ -65,5 +65,5 @@ Business and engineering outcomes are documented in [docs/impact.md](docs/impact
 
 ## Contact
 
-- Email: fuaadabdullah@gmail.com
+- Professional inquiries: https://heyimfuaad.me/contact
 - LinkedIn: https://www.linkedin.com/in/fuaadabdullah
